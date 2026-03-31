@@ -1,41 +1,114 @@
 import * as vscode from 'vscode';
-import type { CombinedState, ContextInfo, MiniMaxResult, GLMResult, SessionHealth } from './shared/types';
+import type { CombinedState, ContextInfo, MiniMaxResult, GLMResult, SessionHealth, LogEntry } from './shared/types';
 import { formatTokens } from './shared/helpers';
+import { eventLogger } from './eventLogger';
 
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
+    private logBarItem: vscode.StatusBarItem;
     private lastNotifiedThreshold = 0;
     private clickTimer: NodeJS.Timeout | undefined;
     private clickCount = 0;
+    private scrollTimer: NodeJS.Timeout | undefined;
+    private scrollIndex = 0;
+    private importantLogs: LogEntry[] = [];
 
     constructor() {
         const cfg = vscode.workspace.getConfiguration('codingMonitor');
         const alignment = cfg.get<string>('statusBarAlignment', 'right');
         const priority = cfg.get<number>('statusBarPriority', 100);
+        const isLeft = alignment === 'left';
 
         this.statusBarItem = vscode.window.createStatusBarItem(
-            alignment === 'left' ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
             priority
         );
         this.statusBarItem.command = 'codingMonitor.statusBarClick';
         this.statusBarItem.text = '$(hubot) --   $(minimax-icon) --%   $(zhipu-icon) --%';
         this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
         this.statusBarItem.show();
+
+        // Log ticker bar — sits just inside the main bar
+        this.logBarItem = vscode.window.createStatusBarItem(
+            isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            isLeft ? priority - 1 : priority - 1
+        );
+        this.logBarItem.command = 'codingMonitor.showDetails';
+        this.logBarItem.hide();
+
+        // Subscribe to log changes
+        eventLogger.subscribe(() => this.refreshLogTicker());
+
+        // Start scroll timer (every 4s rotate)
+        this.scrollTimer = setInterval(() => this.rotateLog(), 4000);
     }
 
     updatePosition(): void {
         const cfg = vscode.workspace.getConfiguration('codingMonitor');
         const alignment = cfg.get<string>('statusBarAlignment', 'right');
         const priority = cfg.get<number>('statusBarPriority', 100);
+        const isLeft = alignment === 'left';
 
         this.statusBarItem.dispose();
         this.statusBarItem = vscode.window.createStatusBarItem(
-            alignment === 'left' ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
             priority
         );
         this.statusBarItem.command = 'codingMonitor.statusBarClick';
         this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
         this.statusBarItem.show();
+
+        this.logBarItem.dispose();
+        this.logBarItem = vscode.window.createStatusBarItem(
+            isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            isLeft ? priority - 1 : priority - 1
+        );
+        this.logBarItem.command = 'codingMonitor.showDetails';
+        if (this.importantLogs.length > 0) {
+            this.logBarItem.show();
+        }
+        this.refreshLogTicker();
+    }
+
+    private refreshLogTicker(): void {
+        this.importantLogs = eventLogger.getLogs().filter(
+            l => l.level === 'error' || l.level === 'warning'
+        );
+        if (this.importantLogs.length === 0) {
+            this.logBarItem.hide();
+            return;
+        }
+        if (this.scrollIndex >= this.importantLogs.length) {
+            this.scrollIndex = 0;
+        }
+        this.renderCurrentLog();
+        this.logBarItem.show();
+    }
+
+    private rotateLog(): void {
+        if (this.importantLogs.length <= 1) return;
+        this.scrollIndex = (this.scrollIndex + 1) % this.importantLogs.length;
+        this.renderCurrentLog();
+    }
+
+    private renderCurrentLog(): void {
+        const log = this.importantLogs[this.scrollIndex];
+        if (!log) return;
+
+        const icon = log.level === 'error' ? '$(error)' : '$(warning)';
+        const time = new Date(log.timestamp).toLocaleTimeString();
+        const msg = log.message.length > 60 ? log.message.substring(0, 57) + '...' : log.message;
+
+        this.logBarItem.text = `${icon} [${log.source}] ${msg}`;
+        this.logBarItem.tooltip = new vscode.MarkdownString(
+            `**${log.level.toUpperCase()}** ${time} [${log.source}]\n\n${log.message}`, true
+        );
+
+        if (log.level === 'error') {
+            this.logBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.errorBackground');
+        } else {
+            this.logBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.warningBackground');
+        }
     }
 
     update(state: CombinedState): void {
@@ -223,6 +296,8 @@ export class StatusBarManager {
     }
 
     dispose(): void {
+        if (this.scrollTimer) clearInterval(this.scrollTimer);
         this.statusBarItem.dispose();
+        this.logBarItem.dispose();
     }
 }
