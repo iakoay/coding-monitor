@@ -6,6 +6,9 @@ interface ConfigValues {
     // API Keys
     codingPlan_minimaxKey: string;
     codingPlan_glmKey: string;
+    // Status Bar
+    codingMonitor_statusBarAlignment: string;
+    codingMonitor_statusBarPriority: number;
     // Claude Context
     claudeContext_refreshInterval: number;
     claudeContext_showPercentage: boolean;
@@ -72,6 +75,8 @@ export class WebviewPanel {
             await cfg.update('claudeContext.freezeCheckInterval', values.claudeContext_freezeCheckInterval, vscode.ConfigurationTarget.Global);
             await cfg.update('claudeContext.freezeThreshold', values.claudeContext_freezeThreshold, vscode.ConfigurationTarget.Global);
             await cfg.update('codingPlan.refreshInterval', values.codingPlan_refreshInterval, vscode.ConfigurationTarget.Global);
+            await cfg.update('codingMonitor.statusBarAlignment', values.codingMonitor_statusBarAlignment, vscode.ConfigurationTarget.Global);
+            await cfg.update('codingMonitor.statusBarPriority', values.codingMonitor_statusBarPriority, vscode.ConfigurationTarget.Global);
 
             this.panel?.webview.postMessage({ type: 'saveResult', success: true });
             this.onConfigSaved?.();
@@ -93,6 +98,8 @@ export class WebviewPanel {
             claudeContext_freezeCheckInterval: cfg.get<number>('claudeContext.freezeCheckInterval', 10000),
             claudeContext_freezeThreshold: cfg.get<number>('claudeContext.freezeThreshold', 30000),
             codingPlan_refreshInterval: cfg.get<number>('codingPlan.refreshInterval', 300),
+            codingMonitor_statusBarAlignment: cfg.get<string>('codingMonitor.statusBarAlignment', 'right'),
+            codingMonitor_statusBarPriority: cfg.get<number>('codingMonitor.statusBarPriority', 100),
         };
     }
 
@@ -353,6 +360,8 @@ export class WebviewPanel {
                 claudeContext_freezeCheckInterval: Number(document.getElementById('cfg-freezeCheckInterval').value),
                 claudeContext_freezeThreshold: Number(document.getElementById('cfg-freezeThreshold').value),
                 codingPlan_refreshInterval: Number(document.getElementById('cfg-apiRefreshInterval').value),
+                codingMonitor_statusBarAlignment: document.getElementById('cfg-statusBarAlignment').value,
+                codingMonitor_statusBarPriority: Number(document.getElementById('cfg-statusBarPriority').value),
             };
             vscode.postMessage({ type: 'saveConfig', values });
         }
@@ -385,65 +394,82 @@ export class WebviewPanel {
             <h3>API Keys</h3>
             <div class="form-group">
                 <label for="cfg-minimaxKey">MiniMax API Key</label>
-                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="输入 MiniMax API Key">
-                <div class="hint">用于获取 MiniMax 编码助手用量配额</div>
+                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="Enter MiniMax API Key">
+                <div class="hint">Used to fetch MiniMax coding plan quota</div>
             </div>
             <div class="form-group">
-                <label for="cfg-glmKey">智谱 GLM API Key</label>
-                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="输入 GLM API Key">
-                <div class="hint">用于获取 GLM 编码助手用量配额</div>
+                <label for="cfg-glmKey">Zhipu GLM API Key</label>
+                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="Enter GLM API Key">
+                <div class="hint">Used to fetch GLM coding plan quota</div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h3>Status Bar</h3>
+            <div class="form-group">
+                <label for="cfg-statusBarAlignment">Alignment</label>
+                <select id="cfg-statusBarAlignment" style="width:100%;padding:6px 8px;background:var(--vscode-input-background,#3c3c3c);color:var(--vscode-input-foreground,#cccccc);border:1px solid var(--vscode-input-border,#3c3c3c);border-radius:4px;">
+                    <option value="left" ${v.codingMonitor_statusBarAlignment === 'left' ? 'selected' : ''}>Left</option>
+                    <option value="right" ${v.codingMonitor_statusBarAlignment === 'right' ? 'selected' : ''}>Right</option>
+                </select>
+                <div class="hint">Status bar position: Left or Right side</div>
+            </div>
+            <div class="form-group">
+                <label for="cfg-statusBarPriority">Priority</label>
+                <input type="number" id="cfg-statusBarPriority" value="${v.codingMonitor_statusBarPriority}" min="0" step="10">
+                <div class="hint">Higher value = more to the left within the alignment side</div>
             </div>
         </div>
 
         <div class="settings-card">
             <h3>Claude Context Monitor</h3>
             <div class="form-group">
-                <label for="cfg-refreshInterval">刷新间隔（毫秒）</label>
+                <label for="cfg-refreshInterval">Refresh Interval (ms)</label>
                 <input type="number" id="cfg-refreshInterval" value="${v.claudeContext_refreshInterval}" min="1000" step="500">
-                <div class="hint">自动刷新上下文使用率的时间间隔，默认 5000ms</div>
+                <div class="hint">Auto-refresh interval for context usage, default 5000ms</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-showPercentage" ${v.claudeContext_showPercentage ? 'checked' : ''}>
-                    <label for="cfg-showPercentage">显示百分比</label>
+                    <label for="cfg-showPercentage">Show Percentage</label>
                 </div>
-                <div class="hint">状态栏显示百分比（关闭则显示 token 数量）</div>
+                <div class="hint">Show percentage in status bar (off = show token count)</div>
             </div>
             <div class="form-group">
-                <label for="cfg-warningThreshold">警告阈值（%）</label>
+                <label for="cfg-warningThreshold">Warning Threshold (%)</label>
                 <input type="number" id="cfg-warningThreshold" value="${v.claudeContext_warningThreshold}" min="1" max="100">
-                <div class="hint">上下文使用率超过此值时状态栏变黄，默认 70%</div>
+                <div class="hint">Status bar turns yellow when context exceeds this value, default 70%</div>
             </div>
             <div class="form-group">
-                <label for="cfg-criticalThreshold">严重阈值（%）</label>
+                <label for="cfg-criticalThreshold">Critical Threshold (%)</label>
                 <input type="number" id="cfg-criticalThreshold" value="${v.claudeContext_criticalThreshold}" min="1" max="100">
-                <div class="hint">上下文使用率超过此值时状态栏变红，默认 90%</div>
+                <div class="hint">Status bar turns red when context exceeds this value, default 90%</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-enableNotifications" ${v.claudeContext_enableNotifications ? 'checked' : ''}>
-                    <label for="cfg-enableNotifications">启用通知</label>
+                    <label for="cfg-enableNotifications">Enable Notifications</label>
                 </div>
-                <div class="hint">超过阈值时弹出通知提醒</div>
+                <div class="hint">Show notification when thresholds are exceeded</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeCheckInterval">冻结检测间隔（毫秒）</label>
+                <label for="cfg-freezeCheckInterval">Freeze Check Interval (ms)</label>
                 <input type="number" id="cfg-freezeCheckInterval" value="${v.claudeContext_freezeCheckInterval}" min="1000" step="1000">
-                <div class="hint">检测 Claude Code 是否冻结的间隔，默认 10000ms</div>
+                <div class="hint">Interval for checking if Claude Code is frozen, default 10000ms</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeThreshold">冻结判定时间（毫秒）</label>
+                <label for="cfg-freezeThreshold">Freeze Threshold (ms)</label>
                 <input type="number" id="cfg-freezeThreshold" value="${v.claudeContext_freezeThreshold}" min="5000" step="5000">
-                <div class="hint">工具调用超过此时间无响应则判定为冻结，默认 30000ms</div>
+                <div class="hint">Tool call exceeding this time with no response is considered frozen, default 30000ms</div>
             </div>
         </div>
 
         <div class="settings-card">
             <h3>Coding Plan</h3>
             <div class="form-group">
-                <label for="cfg-apiRefreshInterval">API 刷新间隔（秒）</label>
+                <label for="cfg-apiRefreshInterval">API Refresh Interval (seconds)</label>
                 <input type="number" id="cfg-apiRefreshInterval" value="${v.codingPlan_refreshInterval}" min="30" step="30">
-                <div class="hint">MiniMax / GLM 配额数据刷新间隔，默认 300 秒</div>
+                <div class="hint">MiniMax / GLM quota data refresh interval, default 300 seconds</div>
             </div>
         </div>
 
@@ -546,9 +572,9 @@ export class WebviewPanel {
                            glm.tokens5h >= 80 ? '#dcdcaa' : '#4ec9b0';
 
         const mcpNameMap: Record<string, string> = {
-            "search-prime": "联网搜索",
-            "web-reader": "网页阅读",
-            "zread": "文档阅读",
+            "search-prime": "Search",
+            "web-reader": "Web Reader",
+            "zread": "Docs",
         };
 
         const mcpRows = glm.mcpUsage.map(d =>

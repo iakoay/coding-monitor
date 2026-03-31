@@ -2,7 +2,7 @@
   "name": "coding-monitor",
   "displayName": "Coding Monitor",
   "description": "Unified monitor for Claude Code context usage, MiniMax and GLM API quotas",
-  "version": "1.1.1",
+  "version": "1.1.5",
   "publisher": "iakoay",
   "repository": {
     "type": "git",
@@ -103,6 +103,22 @@
             "type": "number",
             "default": 30000,
             "description": "Time in ms before a pending tool use is considered frozen (default: 30000ms)"
+          }
+        }
+      },
+      {
+        "title": "Coding Monitor",
+        "properties": {
+          "codingMonitor.statusBarAlignment": {
+            "type": "string",
+            "default": "right",
+            "enum": ["left", "right"],
+            "description": "Status bar alignment position"
+          },
+          "codingMonitor.statusBarPriority": {
+            "type": "number",
+            "default": 100,
+            "description": "Status bar priority (higher = more to the left)"
           }
         }
       },

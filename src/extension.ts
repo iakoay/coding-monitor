@@ -119,6 +119,10 @@ export function activate(context: vscode.ExtensionContext) {
             if (e.affectsConfiguration('codingPlan')) {
                 startApiTimer();
             }
+            if (e.affectsConfiguration('codingMonitor.statusBarAlignment') ||
+                e.affectsConfiguration('codingMonitor.statusBarPriority')) {
+                statusBar.updatePosition();
+            }
         })
     );
 

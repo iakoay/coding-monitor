@@ -9,10 +9,32 @@ export class StatusBarManager {
     private clickCount = 0;
 
     constructor() {
-        this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
+        const cfg = vscode.workspace.getConfiguration('codingMonitor');
+        const alignment = cfg.get<string>('statusBarAlignment', 'right');
+        const priority = cfg.get<number>('statusBarPriority', 100);
+
+        this.statusBarItem = vscode.window.createStatusBarItem(
+            alignment === 'left' ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            priority
+        );
         this.statusBarItem.command = 'codingMonitor.statusBarClick';
         this.statusBarItem.text = '$(hubot) --   $(minimax-icon) --%   $(zhipu-icon) --%';
-        this.statusBarItem.tooltip = '单击刷新 · 双击查看详情';
+        this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
+        this.statusBarItem.show();
+    }
+
+    updatePosition(): void {
+        const cfg = vscode.workspace.getConfiguration('codingMonitor');
+        const alignment = cfg.get<string>('statusBarAlignment', 'right');
+        const priority = cfg.get<number>('statusBarPriority', 100);
+
+        this.statusBarItem.dispose();
+        this.statusBarItem = vscode.window.createStatusBarItem(
+            alignment === 'left' ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right,
+            priority
+        );
+        this.statusBarItem.command = 'codingMonitor.statusBarClick';
+        this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
         this.statusBarItem.show();
     }
 
@@ -53,7 +75,7 @@ export class StatusBarManager {
 
     setLoading(): void {
         this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
-        this.statusBarItem.tooltip = new vscode.MarkdownString('$(loading~spin) 刷新中...', true);
+        this.statusBarItem.tooltip = new vscode.MarkdownString('$(loading~spin) Refreshing...', true);
     }
 
     clearLoading(): void {
@@ -152,8 +174,8 @@ export class StatusBarManager {
         const mm = state.minimax;
         parts.push(
             `### MiniMax\n\n` +
-            `**5h:** ${mm.h5Usage}/${mm.h5Total} · ${this.fmtDuration(mm.h5Remain)} 后重置  \n` +
-            `**周:** ${mm.weekUsage}/${mm.weekTotal}\n\n`
+            `**5h:** ${mm.h5Usage}/${mm.h5Total} · ${this.fmtDuration(mm.h5Remain)} to reset  \n` +
+            `**Week:** ${mm.weekUsage}/${mm.weekTotal}\n\n`
         );
 
         parts.push('---\n\n');
@@ -161,21 +183,21 @@ export class StatusBarManager {
         // GLM section
         const glm = state.glm;
         const mcpNameMap: Record<string, string> = {
-            "search-prime": "联网搜索",
-            "web-reader": "网页阅读",
-            "zread": "文档阅读",
+            "search-prime": "Search",
+            "web-reader": "Web Reader",
+            "zread": "Docs",
         };
         parts.push(
             `### GLM${glm.level ? ` (${glm.level})` : ""}\n\n` +
-            `**5h:** ${glm.tokens5h}% · ${this.fmtResetTime(glm.tokens5hReset)} 后重置  \n` +
-            `**周:** ${glm.tokensWeek}%  \n` +
-            `**MCP:** ${glm.time5hUsed}/${glm.time5hTotal} · ${this.fmtResetTime(glm.nextReset5h)} 后重置  \n` +
+            `**5h:** ${glm.tokens5h}% · ${this.fmtResetTime(glm.tokens5hReset)} to reset  \n` +
+            `**Week:** ${glm.tokensWeek}%  \n` +
+            `**MCP:** ${glm.time5hUsed}/${glm.time5hTotal} · ${this.fmtResetTime(glm.nextReset5h)} to reset  \n` +
             (glm.mcpUsage.length > 0
                 ? glm.mcpUsage.map(d => `　**${mcpNameMap[d.modelCode] ?? d.modelCode}:** ${d.usage}`).join("  \n") + "  \n"
                 : "")
         );
 
-        parts.push(`\n---\n\n_更新于 ${new Date().toLocaleTimeString()}_`);
+        parts.push(`\n---\n\n_Updated at ${new Date().toLocaleTimeString()}_`);
 
         return new vscode.MarkdownString(parts.join(''), true);
     }
@@ -196,7 +218,7 @@ export class StatusBarManager {
     private fmtResetTime(ts: number): string {
         if (ts <= 0) return "--";
         const diff = ts - Date.now();
-        if (diff <= 0) return "即将重置";
+        if (diff <= 0) return "reset soon";
         return this.fmtDuration(diff);
     }
 
