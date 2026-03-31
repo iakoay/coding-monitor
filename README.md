@@ -26,7 +26,7 @@ code --install-extension coding-monitor-1.0.0.vsix
 安装后自动激活，状态栏左侧显示实时数据：
 
 ```
-🤖 32.5% | MiniMax 45% | GLM 28%
+$(hubot) 32.5%   $(minimax-icon) 45%   $(zhipu-icon) 28%
 ```
 
 - **点击状态栏** — 打开详情面板（Claude Context / API Quotas / Health / Settings）

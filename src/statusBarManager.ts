@@ -29,9 +29,9 @@ export class StatusBarManager {
 
         // Assemble text
         if (state.health === 'frozen' || state.health === 'api_error') {
-            this.statusBarItem.text = `$(alert) ${claudeSegment} | ${minimaxSegment} | ${glmSegment}`;
+            this.statusBarItem.text = `$(alert) ${claudeSegment}   ${minimaxSegment}   ${glmSegment}`;
         } else {
-            this.statusBarItem.text = `$(hubot) ${claudeSegment} | ${minimaxSegment} | ${glmSegment}`;
+            this.statusBarItem.text = `$(hubot) ${claudeSegment}   ${minimaxSegment}   ${glmSegment}`;
         }
 
         // All failed

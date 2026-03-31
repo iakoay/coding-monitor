@@ -57,10 +57,10 @@ class StatusBarManager {
         const glmSegment = this.buildGLMSegment(state.glm, state.apiErrors.glm);
         // Assemble text
         if (state.health === 'frozen' || state.health === 'api_error') {
-            this.statusBarItem.text = `$(alert) ${claudeSegment} | ${minimaxSegment} | ${glmSegment}`;
+            this.statusBarItem.text = `$(alert) ${claudeSegment}   ${minimaxSegment}   ${glmSegment}`;
         }
         else {
-            this.statusBarItem.text = `$(hubot) ${claudeSegment} | ${minimaxSegment} | ${glmSegment}`;
+            this.statusBarItem.text = `$(hubot) ${claudeSegment}   ${minimaxSegment}   ${glmSegment}`;
         }
         // All failed
         if (state.apiErrors.minimax && state.apiErrors.glm && !state.claude.info) {
