@@ -2,8 +2,12 @@
   "name": "coding-monitor",
   "displayName": "Coding Monitor",
   "description": "Unified monitor for Claude Code context usage, MiniMax and GLM API quotas",
-  "version": "1.1.0",
-  "publisher": "coding-monitor",
+  "version": "1.1.1",
+  "publisher": "iakoay",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/iakoay/coding-monitor.git"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
