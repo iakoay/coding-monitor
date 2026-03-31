@@ -1,0 +1,135 @@
+{
+  "name": "coding-monitor",
+  "displayName": "Coding Monitor",
+  "description": "Unified monitor for Claude Code context usage, MiniMax and GLM API quotas",
+  "version": "1.0.0",
+  "publisher": "coding-monitor",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "codingMonitor.showDetails",
+        "title": "Coding Monitor: Show Details"
+      },
+      {
+        "command": "claudeContext.refresh",
+        "title": "Claude Context: Refresh"
+      },
+      {
+        "command": "claudeContext.toggleAutoRefresh",
+        "title": "Claude Context: Toggle Auto Refresh"
+      },
+      {
+        "command": "claudeContext.showFreezeLog",
+        "title": "Claude Context: Show Freeze Log"
+      },
+      {
+        "command": "codingPlan.refresh",
+        "title": "Coding Plan: Refresh Usage"
+      },
+      {
+        "command": "codingMonitor.openSettings",
+        "title": "Coding Monitor: Open Settings"
+      }
+    ],
+    "icons": {
+      "minimax-icon": {
+        "description": "MiniMax icon",
+        "default": {
+          "fontPath": "./dist/coding-plan-icons.woff",
+          "fontCharacter": "\\E001"
+        }
+      },
+      "zhipu-icon": {
+        "description": "Zhipu icon",
+        "default": {
+          "fontPath": "./dist/coding-plan-icons.woff",
+          "fontCharacter": "\\E002"
+        }
+      }
+    },
+    "configuration": [
+      {
+        "title": "Claude Code Context Monitor",
+        "properties": {
+          "claudeContext.refreshInterval": {
+            "type": "number",
+            "default": 5000,
+            "description": "Refresh interval in milliseconds (default: 5000ms)"
+          },
+          "claudeContext.showPercentage": {
+            "type": "boolean",
+            "default": true,
+            "description": "Show usage as percentage"
+          },
+          "claudeContext.warningThreshold": {
+            "type": "number",
+            "default": 70,
+            "description": "Warning threshold percentage (yellow indicator)"
+          },
+          "claudeContext.criticalThreshold": {
+            "type": "number",
+            "default": 90,
+            "description": "Critical threshold percentage (red indicator)"
+          },
+          "claudeContext.enableNotifications": {
+            "type": "boolean",
+            "default": true,
+            "description": "Enable notifications when thresholds are exceeded"
+          },
+          "claudeContext.freezeCheckInterval": {
+            "type": "number",
+            "default": 10000,
+            "description": "Freeze detection check interval in milliseconds (default: 10000ms)"
+          },
+          "claudeContext.freezeThreshold": {
+            "type": "number",
+            "default": 30000,
+            "description": "Time in ms before a pending tool use is considered frozen (default: 30000ms)"
+          }
+        }
+      },
+      {
+        "title": "Coding Plan Monitor",
+        "properties": {
+          "codingPlan.minimaxKey": {
+            "type": "string",
+            "default": "",
+            "description": "MiniMax API Key"
+          },
+          "codingPlan.glmKey": {
+            "type": "string",
+            "default": "",
+            "description": "Zhipu GLM API Key"
+          },
+          "codingPlan.refreshInterval": {
+            "type": "number",
+            "default": 300,
+            "description": "Refresh interval (seconds)"
+          }
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.2",
+    "@vscode/vsce": "^3.7.1"
+  },
+  "license": "MIT"
+}
