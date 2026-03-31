@@ -21,6 +21,10 @@
         "title": "Coding Monitor: Show Details"
       },
       {
+        "command": "codingMonitor.statusBarClick",
+        "title": "Coding Monitor: Status Bar Click"
+      },
+      {
         "command": "claudeContext.refresh",
         "title": "Claude Context: Refresh"
       },

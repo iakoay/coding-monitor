@@ -84,6 +84,24 @@ function activate(context) {
     healthMonitor.start();
     context.subscriptions.push({ dispose: () => healthMonitor.stop() });
     // Commands
+    // Single click: refresh, Double click: show details
+    let clickTimer;
+    context.subscriptions.push(vscode.commands.registerCommand('codingMonitor.statusBarClick', () => {
+        if (clickTimer) {
+            // Double click
+            clearTimeout(clickTimer);
+            clickTimer = undefined;
+            webviewPanel.show(currentState);
+        }
+        else {
+            // First click — wait to see if double click follows
+            clickTimer = setTimeout(() => {
+                clickTimer = undefined;
+                refreshClaude();
+                refreshApi();
+            }, 300);
+        }
+    }));
     context.subscriptions.push(vscode.commands.registerCommand('codingMonitor.showDetails', () => {
         webviewPanel.show(currentState);
     }));

@@ -5,12 +5,14 @@ import { formatTokens } from './shared/helpers';
 export class StatusBarManager {
     private statusBarItem: vscode.StatusBarItem;
     private lastNotifiedThreshold = 0;
+    private clickTimer: NodeJS.Timeout | undefined;
+    private clickCount = 0;
 
     constructor() {
         this.statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 100);
-        this.statusBarItem.command = 'codingMonitor.showDetails';
-        this.statusBarItem.text = '$(hubot) -- | $(minimax-icon) --% | $(zhipu-icon) --%';
-        this.statusBarItem.tooltip = 'Coding Monitor (click for details)';
+        this.statusBarItem.command = 'codingMonitor.statusBarClick';
+        this.statusBarItem.text = '$(hubot) --   $(minimax-icon) --%   $(zhipu-icon) --%';
+        this.statusBarItem.tooltip = '单击刷新 · 双击查看详情';
         this.statusBarItem.show();
     }
 
