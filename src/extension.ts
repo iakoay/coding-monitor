@@ -127,6 +127,15 @@ export function activate(context: vscode.ExtensionContext) {
             webviewPanel.show(currentState, 'settings');
         })
     );
+    context.subscriptions.push(
+        vscode.commands.registerCommand('codingMonitor.testLogs', () => {
+            eventLogger.error('Test', 'This is a test error message');
+            eventLogger.warning('Test', 'This is a test warning message');
+            eventLogger.info('Test', 'This is a test info message');
+            currentState.logs = eventLogger.getLogs();
+            vscode.window.showInformationMessage('Test logs added! Check status bar.');
+        })
+    );
 
     // Config change listeners
     context.subscriptions.push(

@@ -137,6 +137,13 @@ function activate(context) {
     context.subscriptions.push(vscode.commands.registerCommand('codingMonitor.openSettings', () => {
         webviewPanel.show(currentState, 'settings');
     }));
+    context.subscriptions.push(vscode.commands.registerCommand('codingMonitor.testLogs', () => {
+        eventLogger_1.eventLogger.error('Test', 'This is a test error message');
+        eventLogger_1.eventLogger.warning('Test', 'This is a test warning message');
+        eventLogger_1.eventLogger.info('Test', 'This is a test info message');
+        currentState.logs = eventLogger_1.eventLogger.getLogs();
+        vscode.window.showInformationMessage('Test logs added! Check status bar.');
+    }));
     // Config change listeners
     context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(e => {
         if (e.affectsConfiguration('claudeContext.refreshInterval')) {
