@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
-import type { CombinedState, ContextInfo, MiniMaxResult, GLMResult } from './shared/types';
+import type { CombinedState, ContextInfo, MiniMaxResult, GLMResult, LogEntry } from './shared/types';
 import { formatTokens, formatDuration, formatResetTime } from './shared/helpers';
+import { eventLogger } from './eventLogger';
 
 interface ConfigValues {
     // API Keys
@@ -25,6 +26,7 @@ export class WebviewPanel {
     private panel: vscode.WebviewPanel | undefined;
     private initialTab: string = 'claude';
     private onConfigSaved: (() => void) | undefined;
+    private logUnsubscribe: (() => void) | undefined;
 
     constructor(onConfigSaved?: () => void) {
         this.onConfigSaved = onConfigSaved;
@@ -50,12 +52,20 @@ export class WebviewPanel {
 
         this.panel.onDidDispose(() => {
             this.panel = undefined;
+            this.logUnsubscribe?.();
         });
 
         this.panel.webview.onDidReceiveMessage(async (msg) => {
             if (msg.type === 'saveConfig') {
                 await this.handleSaveConfig(msg.values as ConfigValues);
+            } else if (msg.type === 'clearLogs') {
+                eventLogger.clear();
             }
+        });
+
+        // Subscribe to log updates
+        this.logUnsubscribe = eventLogger.subscribe((logs) => {
+            this.panel?.webview.postMessage({ type: 'logs', logs });
         });
 
         this.updateContent(state);
@@ -118,6 +128,7 @@ export class WebviewPanel {
         const apiHtml = this.getApiTabHtml(state.minimax, state.glm);
         const healthHtml = this.getHealthTabHtml(state);
         const settingsHtml = this.getSettingsTabHtml();
+        const logsHtml = this.getLogsHtml(state.logs);
         const initialTab = this.initialTab;
 
         return `<!DOCTYPE html>
@@ -127,16 +138,37 @@ export class WebviewPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coding Monitor</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: var(--vscode-font-family);
-            padding: 20px;
+            padding: 16px;
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
+            margin: 0;
+        }
+        .main-layout {
+            display: flex;
+            gap: 16px;
+            height: calc(100vh - 32px);
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+        }
+        .right-panel {
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--vscode-editorWidget-border, #3c3c3c);
+            padding-left: 16px;
         }
         .container { max-width: 700px; margin: 0 auto; }
         h1 {
             color: var(--vscode-titleBar-activeForeground);
             margin-bottom: 16px;
+            font-size: 20px;
         }
         .tabs {
             display: flex;
@@ -308,33 +340,127 @@ export class WebviewPanel {
         }
         .save-result.success { color: #4ec9b0; }
         .save-result.error { color: #f44747; }
+        /* Event Log styles */
+        .log-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .log-header h2 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--vscode-titleBar-activeForeground);
+        }
+        .log-clear-btn {
+            background: transparent;
+            border: 1px solid var(--vscode-button-border, #3c3c3c);
+            color: var(--vscode-descriptionForeground);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .log-clear-btn:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-editorWidget-border, #3c3c3c);
+            border-radius: 6px;
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+        }
+        .log-entry {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--vscode-editorWidget-border, #2d2d2d);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .log-time {
+            color: var(--vscode-descriptionForeground);
+            font-size: 11px;
+        }
+        .log-source {
+            color: var(--vscode-textLink-foreground, #3794ff);
+            font-size: 11px;
+        }
+        .log-level {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .log-level.info { background: rgba(37, 201, 176, 0.2); color: #4ec9b0; }
+        .log-level.warning { background: rgba(220, 221, 170, 0.2); color: #dcdcaa; }
+        .log-level.error { background: rgba(244, 71, 71, 0.2); color: #f44747; }
+        .log-level.success { background: rgba(78, 201, 176, 0.2); color: #4ec9b0; }
+        .log-message {
+            color: var(--vscode-foreground);
+            word-break: break-word;
+        }
+        .log-entry.error-entry {
+            background: rgba(244, 71, 71, 0.05);
+        }
+        .log-entry.warning-entry {
+            background: rgba(220, 221, 170, 0.05);
+        }
+        .log-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Coding Monitor</h1>
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="container">
+                <h1>Coding Monitor</h1>
 
-        <div class="tabs">
-            <div class="tab${initialTab === 'claude' ? ' active' : ''}" onclick="switchTab('claude')">Claude Context</div>
-            <div class="tab${initialTab === 'api' ? ' active' : ''}" onclick="switchTab('api')">API Quotas</div>
-            <div class="tab${initialTab === 'health' ? ' active' : ''}" onclick="switchTab('health')">Health</div>
-            <div class="tab${initialTab === 'settings' ? ' active' : ''}" onclick="switchTab('settings')">$(gear) Settings</div>
+                <div class="tabs">
+                    <div class="tab${initialTab === 'claude' ? ' active' : ''}" onclick="switchTab('claude')">Claude Context</div>
+                    <div class="tab${initialTab === 'api' ? ' active' : ''}" onclick="switchTab('api')">API Quotas</div>
+                    <div class="tab${initialTab === 'health' ? ' active' : ''}" onclick="switchTab('health')">Health</div>
+                    <div class="tab${initialTab === 'settings' ? ' active' : ''}" onclick="switchTab('settings')">Settings</div>
+                </div>
+
+                <div id="tab-claude" class="tab-content${initialTab === 'claude' ? ' active' : ''}">
+                    ${claudeHtml}
+                </div>
+
+                <div id="tab-api" class="tab-content${initialTab === 'api' ? ' active' : ''}">
+                    ${apiHtml}
+                </div>
+
+                <div id="tab-health" class="tab-content${initialTab === 'health' ? ' active' : ''}">
+                    ${healthHtml}
+                </div>
+
+                <div id="tab-settings" class="tab-content${initialTab === 'settings' ? ' active' : ''}">
+                    ${settingsHtml}
+                </div>
+            </div>
         </div>
-
-        <div id="tab-claude" class="tab-content${initialTab === 'claude' ? ' active' : ''}">
-            ${claudeHtml}
-        </div>
-
-        <div id="tab-api" class="tab-content${initialTab === 'api' ? ' active' : ''}">
-            ${apiHtml}
-        </div>
-
-        <div id="tab-health" class="tab-content${initialTab === 'health' ? ' active' : ''}">
-            ${healthHtml}
-        </div>
-
-        <div id="tab-settings" class="tab-content${initialTab === 'settings' ? ' active' : ''}">
-            ${settingsHtml}
+        <div class="right-panel">
+            ${logsHtml}
         </div>
     </div>
 
@@ -366,10 +492,42 @@ export class WebviewPanel {
             vscode.postMessage({ type: 'saveConfig', values });
         }
 
+        function clearLogs() {
+            vscode.postMessage({ type: 'clearLogs' });
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('log-container');
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="log-empty">No events yet</div>';
+                return;
+            }
+            container.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleTimeString();
+                const entryClass = log.level === 'error' ? 'error-entry' : log.level === 'warning' ? 'warning-entry' : '';
+                return '<div class="log-entry ' + entryClass + '">' +
+                    '<div class="log-meta">' +
+                        '<span class="log-time">' + time + '</span>' +
+                        '<span class="log-level ' + log.level + '">' + log.level + '</span>' +
+                        '<span class="log-source">[' + log.source + ']</span>' +
+                    '</div>' +
+                    '<div class="log-message">' + escapeHtml(log.message) + '</div>' +
+                '</div>';
+            }).join('\\n');
+            // Auto-scroll to top (newest)
+            container.scrollTop = 0;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         window.addEventListener('message', event => {
             const msg = event.data;
-            const el = document.getElementById('save-result');
             if (msg.type === 'saveResult') {
+                const el = document.getElementById('save-result');
                 if (msg.success) {
                     el.textContent = 'Saved!';
                     el.className = 'save-result success';
@@ -378,6 +536,8 @@ export class WebviewPanel {
                     el.className = 'save-result error';
                 }
                 setTimeout(() => { el.textContent = ''; el.className = 'save-result'; }, 3000);
+            } else if (msg.type === 'logs') {
+                renderLogs(msg.logs);
             }
         });
     </script>
@@ -663,5 +823,36 @@ export class WebviewPanel {
         <div class="refresh-info">
             Use "Claude Context: Show Freeze Log" command for detailed diagnostics.
         </div>`;
+    }
+
+    private getLogsHtml(logs: LogEntry[]): string {
+        const logEntries = logs.map(log => {
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            const entryClass = log.level === 'error' ? 'error-entry' : log.level === 'warning' ? 'warning-entry' : '';
+            const message = this.escapeHtml(log.message);
+            return `<div class="log-entry ${entryClass}">
+                <div class="log-meta">
+                    <span class="log-time">${time}</span>
+                    <span class="log-level ${log.level}">${log.level}</span>
+                    <span class="log-source">[${log.source}]</span>
+                </div>
+                <div class="log-message">${message}</div>
+            </div>`;
+        }).join('\n');
+
+        return `
+        <div class="log-panel">
+            <div class="log-header">
+                <h2>Event Log</h2>
+                <button class="log-clear-btn" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="log-container" id="log-container">
+                ${logs.length === 0 ? '<div class="log-empty">No events yet</div>' : logEntries}
+            </div>
+        </div>`;
+    }
+
+    private escapeHtml(s: string): string {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 }

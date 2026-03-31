@@ -117,6 +117,17 @@ export const EMPTY_GLM: GLMResult = {
     mcpUsage: [],
 };
 
+// ── Event Log ──────────────────────────────────────────
+
+export type LogLevel = 'info' | 'warning' | 'error' | 'success';
+
+export interface LogEntry {
+    timestamp: number;
+    level: LogLevel;
+    source: string;
+    message: string;
+}
+
 // ── Combined State ────────────────────────────────────
 
 export interface CombinedState {
@@ -129,4 +140,5 @@ export interface CombinedState {
     minimax: MiniMaxResult;
     glm: GLMResult;
     apiErrors: { minimax: boolean; glm: boolean };
+    logs: LogEntry[];
 }

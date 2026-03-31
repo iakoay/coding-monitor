@@ -43,6 +43,7 @@ const statusBarManager_1 = require("./statusBarManager");
 const webviewPanel_1 = require("./webviewPanel");
 const minimaxFetcher_1 = require("./api/minimaxFetcher");
 const glmFetcher_1 = require("./api/glmFetcher");
+const eventLogger_1 = require("./eventLogger");
 const types_1 = require("./shared/types");
 let statusBar;
 let webviewPanel;
@@ -61,6 +62,7 @@ let currentState = {
     minimax: { ...types_1.EMPTY_MINIMAX },
     glm: { ...types_1.EMPTY_GLM },
     apiErrors: { minimax: false, glm: false },
+    logs: [],
 };
 function activate(context) {
     console.log('Coding Monitor is now active');
@@ -77,8 +79,25 @@ function activate(context) {
     });
     // Health monitor with callback
     healthMonitor = new healthMonitor_1.HealthMonitor(outputChannel, () => contextReader.findActiveSessionFile(), (state, reason) => {
+        const prevHealth = currentState.health;
         currentState.health = state;
         currentState.healthReason = reason;
+        // Log health state changes
+        if (state !== prevHealth) {
+            if (state === 'frozen') {
+                eventLogger_1.eventLogger.error('Health', `Session frozen: ${reason}`);
+            }
+            else if (state === 'api_error') {
+                eventLogger_1.eventLogger.error('Health', `API error: ${reason}`);
+            }
+            else if (state === 'healthy' && prevHealth !== 'no_session') {
+                eventLogger_1.eventLogger.success('Health', 'Session recovered');
+            }
+            else if (state === 'no_session' && prevHealth !== 'no_session') {
+                eventLogger_1.eventLogger.info('Health', 'Session ended');
+            }
+            currentState.logs = eventLogger_1.eventLogger.getLogs();
+        }
         statusBar.update(currentState);
     });
     healthMonitor.start();
@@ -126,6 +145,10 @@ function activate(context) {
         if (e.affectsConfiguration('codingPlan')) {
             startApiTimer();
         }
+        if (e.affectsConfiguration('codingMonitor.statusBarAlignment') ||
+            e.affectsConfiguration('codingMonitor.statusBarPriority')) {
+            statusBar.updatePosition();
+        }
     }));
     // Initial refresh
     refreshClaude();
@@ -165,9 +188,25 @@ async function refreshClaude() {
         const info = await contextReader.getContext();
         currentState.claude = { info, error: null };
         contextReader.checkThresholds(info);
+        // Log threshold warnings
+        if (info) {
+            const config = vscode.workspace.getConfiguration('claudeContext');
+            const warningThreshold = config.get('warningThreshold', 70);
+            const criticalThreshold = config.get('criticalThreshold', 90);
+            if (info.percentage >= criticalThreshold) {
+                eventLogger_1.eventLogger.error('Context', `Critical: ${info.percentage.toFixed(1)}% context used`);
+                currentState.logs = eventLogger_1.eventLogger.getLogs();
+            }
+            else if (info.percentage >= warningThreshold) {
+                eventLogger_1.eventLogger.warning('Context', `Warning: ${info.percentage.toFixed(1)}% context used`);
+                currentState.logs = eventLogger_1.eventLogger.getLogs();
+            }
+        }
     }
     catch (error) {
         currentState.claude = { info: null, error: error instanceof Error ? error.message : String(error) };
+        eventLogger_1.eventLogger.error('Context', `Failed to read context: ${error instanceof Error ? error.message : String(error)}`);
+        currentState.logs = eventLogger_1.eventLogger.getLogs();
     }
     statusBar.update(currentState);
 }
@@ -189,22 +228,41 @@ async function refreshApi() {
         if (minimaxRes.status === 'fulfilled') {
             currentState.minimax = minimaxRes.value;
             currentState.apiErrors.minimax = false;
+            // Log quota warnings
+            if (minimaxRes.value.h5Percent >= 95) {
+                eventLogger_1.eventLogger.error('MiniMax', `Quota critical: ${minimaxRes.value.h5Percent}% used`);
+            }
+            else if (minimaxRes.value.h5Percent >= 80) {
+                eventLogger_1.eventLogger.warning('MiniMax', `Quota warning: ${minimaxRes.value.h5Percent}% used`);
+            }
         }
         else {
             logError('MiniMax', minimaxRes.reason);
             currentState.apiErrors.minimax = true;
+            eventLogger_1.eventLogger.error('MiniMax', `API error: ${minimaxRes.reason instanceof Error ? minimaxRes.reason.message : String(minimaxRes.reason)}`);
         }
         if (glmRes.status === 'fulfilled') {
             currentState.glm = glmRes.value;
             currentState.apiErrors.glm = false;
+            // Log quota warnings
+            if (glmRes.value.tokens5h >= 95) {
+                eventLogger_1.eventLogger.error('GLM', `Quota critical: ${glmRes.value.tokens5h}% used`);
+            }
+            else if (glmRes.value.tokens5h >= 80) {
+                eventLogger_1.eventLogger.warning('GLM', `Quota warning: ${glmRes.value.tokens5h}% used`);
+            }
         }
         else {
             logError('GLM', glmRes.reason);
             currentState.apiErrors.glm = true;
+            eventLogger_1.eventLogger.error('GLM', `API error: ${glmRes.reason instanceof Error ? glmRes.reason.message : String(glmRes.reason)}`);
         }
+        currentState.logs = eventLogger_1.eventLogger.getLogs();
     }
     catch (e) {
         logError('API Update', e);
+        eventLogger_1.eventLogger.error('API', `Update failed: ${e instanceof Error ? e.message : String(e)}`);
+        currentState.logs = eventLogger_1.eventLogger.getLogs();
     }
     statusBar.update(currentState);
 }

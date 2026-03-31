@@ -36,6 +36,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.WebviewPanel = void 0;
 const vscode = __importStar(require("vscode"));
 const helpers_1 = require("./shared/helpers");
+const eventLogger_1 = require("./eventLogger");
 class WebviewPanel {
     constructor(onConfigSaved) {
         this.initialTab = 'claude';
@@ -53,11 +54,19 @@ class WebviewPanel {
         this.panel = vscode.window.createWebviewPanel('codingMonitorDetails', 'Coding Monitor', vscode.ViewColumn.Beside, { enableScripts: true });
         this.panel.onDidDispose(() => {
             this.panel = undefined;
+            this.logUnsubscribe?.();
         });
         this.panel.webview.onDidReceiveMessage(async (msg) => {
             if (msg.type === 'saveConfig') {
                 await this.handleSaveConfig(msg.values);
             }
+            else if (msg.type === 'clearLogs') {
+                eventLogger_1.eventLogger.clear();
+            }
+        });
+        // Subscribe to log updates
+        this.logUnsubscribe = eventLogger_1.eventLogger.subscribe((logs) => {
+            this.panel?.webview.postMessage({ type: 'logs', logs });
         });
         this.updateContent(state);
     }
@@ -74,6 +83,8 @@ class WebviewPanel {
             await cfg.update('claudeContext.freezeCheckInterval', values.claudeContext_freezeCheckInterval, vscode.ConfigurationTarget.Global);
             await cfg.update('claudeContext.freezeThreshold', values.claudeContext_freezeThreshold, vscode.ConfigurationTarget.Global);
             await cfg.update('codingPlan.refreshInterval', values.codingPlan_refreshInterval, vscode.ConfigurationTarget.Global);
+            await cfg.update('codingMonitor.statusBarAlignment', values.codingMonitor_statusBarAlignment, vscode.ConfigurationTarget.Global);
+            await cfg.update('codingMonitor.statusBarPriority', values.codingMonitor_statusBarPriority, vscode.ConfigurationTarget.Global);
             this.panel?.webview.postMessage({ type: 'saveResult', success: true });
             this.onConfigSaved?.();
         }
@@ -94,6 +105,8 @@ class WebviewPanel {
             claudeContext_freezeCheckInterval: cfg.get('claudeContext.freezeCheckInterval', 10000),
             claudeContext_freezeThreshold: cfg.get('claudeContext.freezeThreshold', 30000),
             codingPlan_refreshInterval: cfg.get('codingPlan.refreshInterval', 300),
+            codingMonitor_statusBarAlignment: cfg.get('codingMonitor.statusBarAlignment', 'right'),
+            codingMonitor_statusBarPriority: cfg.get('codingMonitor.statusBarPriority', 100),
         };
     }
     updateContent(state) {
@@ -109,6 +122,7 @@ class WebviewPanel {
         const apiHtml = this.getApiTabHtml(state.minimax, state.glm);
         const healthHtml = this.getHealthTabHtml(state);
         const settingsHtml = this.getSettingsTabHtml();
+        const logsHtml = this.getLogsHtml(state.logs);
         const initialTab = this.initialTab;
         return `<!DOCTYPE html>
 <html lang="en">
@@ -117,16 +131,37 @@ class WebviewPanel {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coding Monitor</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: var(--vscode-font-family);
-            padding: 20px;
+            padding: 16px;
             color: var(--vscode-foreground);
             background-color: var(--vscode-editor-background);
+            margin: 0;
+        }
+        .main-layout {
+            display: flex;
+            gap: 16px;
+            height: calc(100vh - 32px);
+        }
+        .left-panel {
+            flex: 1;
+            min-width: 0;
+            overflow-y: auto;
+        }
+        .right-panel {
+            width: 320px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--vscode-editorWidget-border, #3c3c3c);
+            padding-left: 16px;
         }
         .container { max-width: 700px; margin: 0 auto; }
         h1 {
             color: var(--vscode-titleBar-activeForeground);
             margin-bottom: 16px;
+            font-size: 20px;
         }
         .tabs {
             display: flex;
@@ -298,33 +333,127 @@ class WebviewPanel {
         }
         .save-result.success { color: #4ec9b0; }
         .save-result.error { color: #f44747; }
+        /* Event Log styles */
+        .log-panel {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .log-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .log-header h2 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--vscode-titleBar-activeForeground);
+        }
+        .log-clear-btn {
+            background: transparent;
+            border: 1px solid var(--vscode-button-border, #3c3c3c);
+            color: var(--vscode-descriptionForeground);
+            padding: 4px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        .log-clear-btn:hover {
+            background: var(--vscode-toolbar-hoverBackground);
+        }
+        .log-container {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--vscode-editor-background);
+            border: 1px solid var(--vscode-editorWidget-border, #3c3c3c);
+            border-radius: 6px;
+            font-family: var(--vscode-editor-font-family, monospace);
+            font-size: 12px;
+        }
+        .log-entry {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--vscode-editorWidget-border, #2d2d2d);
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        .log-meta {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .log-time {
+            color: var(--vscode-descriptionForeground);
+            font-size: 11px;
+        }
+        .log-source {
+            color: var(--vscode-textLink-foreground, #3794ff);
+            font-size: 11px;
+        }
+        .log-level {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 3px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+        .log-level.info { background: rgba(37, 201, 176, 0.2); color: #4ec9b0; }
+        .log-level.warning { background: rgba(220, 221, 170, 0.2); color: #dcdcaa; }
+        .log-level.error { background: rgba(244, 71, 71, 0.2); color: #f44747; }
+        .log-level.success { background: rgba(78, 201, 176, 0.2); color: #4ec9b0; }
+        .log-message {
+            color: var(--vscode-foreground);
+            word-break: break-word;
+        }
+        .log-entry.error-entry {
+            background: rgba(244, 71, 71, 0.05);
+        }
+        .log-entry.warning-entry {
+            background: rgba(220, 221, 170, 0.05);
+        }
+        .log-empty {
+            padding: 20px;
+            text-align: center;
+            color: var(--vscode-descriptionForeground);
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Coding Monitor</h1>
+    <div class="main-layout">
+        <div class="left-panel">
+            <div class="container">
+                <h1>Coding Monitor</h1>
 
-        <div class="tabs">
-            <div class="tab${initialTab === 'claude' ? ' active' : ''}" onclick="switchTab('claude')">Claude Context</div>
-            <div class="tab${initialTab === 'api' ? ' active' : ''}" onclick="switchTab('api')">API Quotas</div>
-            <div class="tab${initialTab === 'health' ? ' active' : ''}" onclick="switchTab('health')">Health</div>
-            <div class="tab${initialTab === 'settings' ? ' active' : ''}" onclick="switchTab('settings')">$(gear) Settings</div>
+                <div class="tabs">
+                    <div class="tab${initialTab === 'claude' ? ' active' : ''}" onclick="switchTab('claude')">Claude Context</div>
+                    <div class="tab${initialTab === 'api' ? ' active' : ''}" onclick="switchTab('api')">API Quotas</div>
+                    <div class="tab${initialTab === 'health' ? ' active' : ''}" onclick="switchTab('health')">Health</div>
+                    <div class="tab${initialTab === 'settings' ? ' active' : ''}" onclick="switchTab('settings')">Settings</div>
+                </div>
+
+                <div id="tab-claude" class="tab-content${initialTab === 'claude' ? ' active' : ''}">
+                    ${claudeHtml}
+                </div>
+
+                <div id="tab-api" class="tab-content${initialTab === 'api' ? ' active' : ''}">
+                    ${apiHtml}
+                </div>
+
+                <div id="tab-health" class="tab-content${initialTab === 'health' ? ' active' : ''}">
+                    ${healthHtml}
+                </div>
+
+                <div id="tab-settings" class="tab-content${initialTab === 'settings' ? ' active' : ''}">
+                    ${settingsHtml}
+                </div>
+            </div>
         </div>
-
-        <div id="tab-claude" class="tab-content${initialTab === 'claude' ? ' active' : ''}">
-            ${claudeHtml}
-        </div>
-
-        <div id="tab-api" class="tab-content${initialTab === 'api' ? ' active' : ''}">
-            ${apiHtml}
-        </div>
-
-        <div id="tab-health" class="tab-content${initialTab === 'health' ? ' active' : ''}">
-            ${healthHtml}
-        </div>
-
-        <div id="tab-settings" class="tab-content${initialTab === 'settings' ? ' active' : ''}">
-            ${settingsHtml}
+        <div class="right-panel">
+            ${logsHtml}
         </div>
     </div>
 
@@ -350,14 +479,48 @@ class WebviewPanel {
                 claudeContext_freezeCheckInterval: Number(document.getElementById('cfg-freezeCheckInterval').value),
                 claudeContext_freezeThreshold: Number(document.getElementById('cfg-freezeThreshold').value),
                 codingPlan_refreshInterval: Number(document.getElementById('cfg-apiRefreshInterval').value),
+                codingMonitor_statusBarAlignment: document.getElementById('cfg-statusBarAlignment').value,
+                codingMonitor_statusBarPriority: Number(document.getElementById('cfg-statusBarPriority').value),
             };
             vscode.postMessage({ type: 'saveConfig', values });
         }
 
+        function clearLogs() {
+            vscode.postMessage({ type: 'clearLogs' });
+        }
+
+        function renderLogs(logs) {
+            const container = document.getElementById('log-container');
+            if (!logs || logs.length === 0) {
+                container.innerHTML = '<div class="log-empty">No events yet</div>';
+                return;
+            }
+            container.innerHTML = logs.map(log => {
+                const time = new Date(log.timestamp).toLocaleTimeString();
+                const entryClass = log.level === 'error' ? 'error-entry' : log.level === 'warning' ? 'warning-entry' : '';
+                return '<div class="log-entry ' + entryClass + '">' +
+                    '<div class="log-meta">' +
+                        '<span class="log-time">' + time + '</span>' +
+                        '<span class="log-level ' + log.level + '">' + log.level + '</span>' +
+                        '<span class="log-source">[' + log.source + ']</span>' +
+                    '</div>' +
+                    '<div class="log-message">' + escapeHtml(log.message) + '</div>' +
+                '</div>';
+            }).join('\\n');
+            // Auto-scroll to top (newest)
+            container.scrollTop = 0;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
         window.addEventListener('message', event => {
             const msg = event.data;
-            const el = document.getElementById('save-result');
             if (msg.type === 'saveResult') {
+                const el = document.getElementById('save-result');
                 if (msg.success) {
                     el.textContent = 'Saved!';
                     el.className = 'save-result success';
@@ -366,6 +529,8 @@ class WebviewPanel {
                     el.className = 'save-result error';
                 }
                 setTimeout(() => { el.textContent = ''; el.className = 'save-result'; }, 3000);
+            } else if (msg.type === 'logs') {
+                renderLogs(msg.logs);
             }
         });
     </script>
@@ -380,65 +545,82 @@ class WebviewPanel {
             <h3>API Keys</h3>
             <div class="form-group">
                 <label for="cfg-minimaxKey">MiniMax API Key</label>
-                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="输入 MiniMax API Key">
-                <div class="hint">用于获取 MiniMax 编码助手用量配额</div>
+                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="Enter MiniMax API Key">
+                <div class="hint">Used to fetch MiniMax coding plan quota</div>
             </div>
             <div class="form-group">
-                <label for="cfg-glmKey">智谱 GLM API Key</label>
-                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="输入 GLM API Key">
-                <div class="hint">用于获取 GLM 编码助手用量配额</div>
+                <label for="cfg-glmKey">Zhipu GLM API Key</label>
+                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="Enter GLM API Key">
+                <div class="hint">Used to fetch GLM coding plan quota</div>
+            </div>
+        </div>
+
+        <div class="settings-card">
+            <h3>Status Bar</h3>
+            <div class="form-group">
+                <label for="cfg-statusBarAlignment">Alignment</label>
+                <select id="cfg-statusBarAlignment" style="width:100%;padding:6px 8px;background:var(--vscode-input-background,#3c3c3c);color:var(--vscode-input-foreground,#cccccc);border:1px solid var(--vscode-input-border,#3c3c3c);border-radius:4px;">
+                    <option value="left" ${v.codingMonitor_statusBarAlignment === 'left' ? 'selected' : ''}>Left</option>
+                    <option value="right" ${v.codingMonitor_statusBarAlignment === 'right' ? 'selected' : ''}>Right</option>
+                </select>
+                <div class="hint">Status bar position: Left or Right side</div>
+            </div>
+            <div class="form-group">
+                <label for="cfg-statusBarPriority">Priority</label>
+                <input type="number" id="cfg-statusBarPriority" value="${v.codingMonitor_statusBarPriority}" min="0" step="10">
+                <div class="hint">Higher value = more to the left within the alignment side</div>
             </div>
         </div>
 
         <div class="settings-card">
             <h3>Claude Context Monitor</h3>
             <div class="form-group">
-                <label for="cfg-refreshInterval">刷新间隔（毫秒）</label>
+                <label for="cfg-refreshInterval">Refresh Interval (ms)</label>
                 <input type="number" id="cfg-refreshInterval" value="${v.claudeContext_refreshInterval}" min="1000" step="500">
-                <div class="hint">自动刷新上下文使用率的时间间隔，默认 5000ms</div>
+                <div class="hint">Auto-refresh interval for context usage, default 5000ms</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-showPercentage" ${v.claudeContext_showPercentage ? 'checked' : ''}>
-                    <label for="cfg-showPercentage">显示百分比</label>
+                    <label for="cfg-showPercentage">Show Percentage</label>
                 </div>
-                <div class="hint">状态栏显示百分比（关闭则显示 token 数量）</div>
+                <div class="hint">Show percentage in status bar (off = show token count)</div>
             </div>
             <div class="form-group">
-                <label for="cfg-warningThreshold">警告阈值（%）</label>
+                <label for="cfg-warningThreshold">Warning Threshold (%)</label>
                 <input type="number" id="cfg-warningThreshold" value="${v.claudeContext_warningThreshold}" min="1" max="100">
-                <div class="hint">上下文使用率超过此值时状态栏变黄，默认 70%</div>
+                <div class="hint">Status bar turns yellow when context exceeds this value, default 70%</div>
             </div>
             <div class="form-group">
-                <label for="cfg-criticalThreshold">严重阈值（%）</label>
+                <label for="cfg-criticalThreshold">Critical Threshold (%)</label>
                 <input type="number" id="cfg-criticalThreshold" value="${v.claudeContext_criticalThreshold}" min="1" max="100">
-                <div class="hint">上下文使用率超过此值时状态栏变红，默认 90%</div>
+                <div class="hint">Status bar turns red when context exceeds this value, default 90%</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-enableNotifications" ${v.claudeContext_enableNotifications ? 'checked' : ''}>
-                    <label for="cfg-enableNotifications">启用通知</label>
+                    <label for="cfg-enableNotifications">Enable Notifications</label>
                 </div>
-                <div class="hint">超过阈值时弹出通知提醒</div>
+                <div class="hint">Show notification when thresholds are exceeded</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeCheckInterval">冻结检测间隔（毫秒）</label>
+                <label for="cfg-freezeCheckInterval">Freeze Check Interval (ms)</label>
                 <input type="number" id="cfg-freezeCheckInterval" value="${v.claudeContext_freezeCheckInterval}" min="1000" step="1000">
-                <div class="hint">检测 Claude Code 是否冻结的间隔，默认 10000ms</div>
+                <div class="hint">Interval for checking if Claude Code is frozen, default 10000ms</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeThreshold">冻结判定时间（毫秒）</label>
+                <label for="cfg-freezeThreshold">Freeze Threshold (ms)</label>
                 <input type="number" id="cfg-freezeThreshold" value="${v.claudeContext_freezeThreshold}" min="5000" step="5000">
-                <div class="hint">工具调用超过此时间无响应则判定为冻结，默认 30000ms</div>
+                <div class="hint">Tool call exceeding this time with no response is considered frozen, default 30000ms</div>
             </div>
         </div>
 
         <div class="settings-card">
             <h3>Coding Plan</h3>
             <div class="form-group">
-                <label for="cfg-apiRefreshInterval">API 刷新间隔（秒）</label>
+                <label for="cfg-apiRefreshInterval">API Refresh Interval (seconds)</label>
                 <input type="number" id="cfg-apiRefreshInterval" value="${v.codingPlan_refreshInterval}" min="30" step="30">
-                <div class="hint">MiniMax / GLM 配额数据刷新间隔，默认 300 秒</div>
+                <div class="hint">MiniMax / GLM quota data refresh interval, default 300 seconds</div>
             </div>
         </div>
 
@@ -532,9 +714,9 @@ class WebviewPanel {
         const glmBarColor = glm.tokens5h >= 95 ? '#f44747' :
             glm.tokens5h >= 80 ? '#dcdcaa' : '#4ec9b0';
         const mcpNameMap = {
-            "search-prime": "联网搜索",
-            "web-reader": "网页阅读",
-            "zread": "文档阅读",
+            "search-prime": "Search",
+            "web-reader": "Web Reader",
+            "zread": "Docs",
         };
         const mcpRows = glm.mcpUsage.map(d => `<tr><td>${mcpNameMap[d.modelCode] ?? d.modelCode}</td><td>${d.usage}</td></tr>`).join('\n');
         return `
@@ -616,6 +798,34 @@ class WebviewPanel {
         <div class="refresh-info">
             Use "Claude Context: Show Freeze Log" command for detailed diagnostics.
         </div>`;
+    }
+    getLogsHtml(logs) {
+        const logEntries = logs.map(log => {
+            const time = new Date(log.timestamp).toLocaleTimeString();
+            const entryClass = log.level === 'error' ? 'error-entry' : log.level === 'warning' ? 'warning-entry' : '';
+            const message = this.escapeHtml(log.message);
+            return `<div class="log-entry ${entryClass}">
+                <div class="log-meta">
+                    <span class="log-time">${time}</span>
+                    <span class="log-level ${log.level}">${log.level}</span>
+                    <span class="log-source">[${log.source}]</span>
+                </div>
+                <div class="log-message">${message}</div>
+            </div>`;
+        }).join('\n');
+        return `
+        <div class="log-panel">
+            <div class="log-header">
+                <h2>Event Log</h2>
+                <button class="log-clear-btn" onclick="clearLogs()">Clear</button>
+            </div>
+            <div class="log-container" id="log-container">
+                ${logs.length === 0 ? '<div class="log-empty">No events yet</div>' : logEntries}
+            </div>
+        </div>`;
+    }
+    escapeHtml(s) {
+        return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
 }
 exports.WebviewPanel = WebviewPanel;
