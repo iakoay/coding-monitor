@@ -755,8 +755,16 @@ class WebviewPanel {
                 <span class="value">${glm.tokensWeek}% (${(0, helpers_1.formatResetTime)(glm.tokensWeekReset)} reset)</span>
             </div>
             <div class="info-row">
-                <span class="label">MCP Time</span>
-                <span class="value">${glm.time5hUsed} / ${glm.time5hTotal} (${(0, helpers_1.formatResetTime)(glm.nextReset5h)})</span>
+                <span class="label">Monthly Model Usage</span>
+                <span class="value">${glm.time5h}%</span>
+            </div>
+            <div class="info-row">
+                <span class="label">Monthly Reset</span>
+                <span class="value">${(0, helpers_1.formatResetTime)(glm.nextReset5h)}</span>
+            </div>
+            <div class="info-row">
+                <span class="label">MCP Tools</span>
+                <span class="value">${glm.time5hUsed} / ${glm.time5hTotal}</span>
             </div>
             ${glm.mcpUsage.length > 0 ? `
             <table>

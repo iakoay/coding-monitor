@@ -244,7 +244,8 @@ class StatusBarManager {
         parts.push(`### GLM${glm.level ? ` (${glm.level})` : ""}\n\n` +
             `**5h:** ${glm.tokens5h}% · ${this.fmtResetTime(glm.tokens5hReset)} to reset  \n` +
             `**Week:** ${glm.tokensWeek}% · ${this.fmtResetTime(glm.tokensWeekReset)} to reset  \n` +
-            `**MCP:** ${glm.time5hUsed}/${glm.time5hTotal} · ${this.fmtResetTime(glm.nextReset5h)} to reset  \n` +
+            `**Monthly:** ${glm.time5h}% · ${this.fmtResetTime(glm.nextReset5h)} to reset  \n` +
+            `**MCP:** ${glm.time5hUsed}/${glm.time5hTotal}  \n` +
             (glm.mcpUsage.length > 0
                 ? glm.mcpUsage.map(d => `　**${mcpNameMap[d.modelCode] ?? d.modelCode}:** ${d.usage}`).join("  \n") + "  \n"
                 : ""));
