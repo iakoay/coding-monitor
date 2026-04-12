@@ -19,6 +19,7 @@ async function fetchGLM(key, signal) {
         }
         else if (lim.type === "TOKENS_LIMIT" && lim.unit === 6) {
             result.tokensWeek = lim.percentage ?? 0;
+            result.tokensWeekReset = lim.nextResetTime ?? 0;
         }
         else if (lim.type === "TIME_LIMIT" && lim.unit === 5) {
             result.time5h = lim.percentage ?? 0;

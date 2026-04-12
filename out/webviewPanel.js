@@ -752,7 +752,7 @@ class WebviewPanel {
             </div>
             <div class="info-row">
                 <span class="label">Weekly Token Usage</span>
-                <span class="value">${glm.tokensWeek}%</span>
+                <span class="value">${glm.tokensWeek}% (${(0, helpers_1.formatResetTime)(glm.tokensWeekReset)} reset)</span>
             </div>
             <div class="info-row">
                 <span class="label">MCP Time</span>

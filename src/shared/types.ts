@@ -100,6 +100,7 @@ export interface GLMResult {
     tokens5h: number;
     tokens5hReset: number;
     tokensWeek: number;
+    tokensWeekReset: number;
     time5h: number;
     time5hRemain: number;
     time5hTotal: number;
@@ -110,7 +111,7 @@ export interface GLMResult {
 }
 
 export const EMPTY_GLM: GLMResult = {
-    tokens5h: 0, tokens5hReset: 0, tokensWeek: 0,
+    tokens5h: 0, tokens5hReset: 0, tokensWeek: 0, tokensWeekReset: 0,
     time5h: 0, time5hRemain: 0, time5hTotal: 0, time5hUsed: 0,
     nextReset5h: 0,
     level: "",
