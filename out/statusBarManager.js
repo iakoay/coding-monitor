@@ -50,7 +50,7 @@ class StatusBarManager {
         this.statusBarItem = vscode.window.createStatusBarItem(isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right, priority);
         this.statusBarItem.command = 'codingMonitor.statusBarClick';
         this.statusBarItem.text = '$(hubot) --   $(minimax-icon) --%   $(zhipu-icon) --%';
-        this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
+        this.statusBarItem.tooltip = '单击刷新 · 双击打开详情';
         this.statusBarItem.show();
         // Log ticker bar — sits just inside the main bar
         this.logBarItem = vscode.window.createStatusBarItem(isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right, isLeft ? priority - 1 : priority - 1);
@@ -69,7 +69,7 @@ class StatusBarManager {
         this.statusBarItem.dispose();
         this.statusBarItem = vscode.window.createStatusBarItem(isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right, priority);
         this.statusBarItem.command = 'codingMonitor.statusBarClick';
-        this.statusBarItem.tooltip = 'Click: Refresh · Double-click: Details';
+        this.statusBarItem.tooltip = '单击刷新 · 双击打开详情';
         this.statusBarItem.show();
         this.logBarItem.dispose();
         this.logBarItem = vscode.window.createStatusBarItem(isLeft ? vscode.StatusBarAlignment.Left : vscode.StatusBarAlignment.Right, isLeft ? priority - 1 : priority - 1);
@@ -143,16 +143,16 @@ class StatusBarManager {
     }
     setLoading() {
         this.statusBarItem.backgroundColor = new vscode.ThemeColor('statusBarItem.prominentBackground');
-        this.statusBarItem.tooltip = new vscode.MarkdownString('$(loading~spin) Refreshing...', true);
+        this.statusBarItem.tooltip = new vscode.MarkdownString('$(loading~spin) 刷新中...', true);
     }
     clearLoading() {
         this.statusBarItem.backgroundColor = undefined;
     }
     buildClaudeSegment(info, health, showPercentage) {
         if (health === 'frozen')
-            return 'FROZEN';
+            return '冻结';
         if (health === 'api_error')
-            return 'API_ERR';
+            return 'API错误';
         if (!info)
             return '--';
         if (showPercentage) {
@@ -211,45 +211,46 @@ class StatusBarManager {
         const parts = [];
         // Health warning
         if (state.health === 'frozen' || state.health === 'api_error') {
-            parts.push(`**⚠ ${state.health.toUpperCase()}** — ${state.healthReason}\n\n---\n\n`);
+            const label = state.health === 'frozen' ? '冻结' : 'API 错误';
+            parts.push(`**⚠ ${label}** — ${state.healthReason}\n\n---\n\n`);
         }
         // Claude section
         if (state.claude.info) {
             const info = state.claude.info;
-            parts.push(`### Claude Code Context\n\n` +
-                `- **Model:** ${info.model}\n` +
-                `- **Used:** ${(0, helpers_1.formatTokens)(info.usedTokens)} / ${(0, helpers_1.formatTokens)(info.maxTokens)} tokens\n` +
-                `- **Usage:** ${info.percentage.toFixed(2)}%\n` +
-                `- **Input:** ${(0, helpers_1.formatTokens)(info.inputTokens)} | **Cache:** ${(0, helpers_1.formatTokens)(info.cacheReadTokens)}\n` +
-                `- **Session:** ${info.sessionId.substring(0, 8)}...\n` +
-                `- **Updated:** ${info.lastUpdated.toLocaleTimeString()}\n\n`);
+            parts.push(`### Claude Code 上下文\n\n` +
+                `模型　　　　 ${info.model}  \n` +
+                `已用　　　　 ${(0, helpers_1.formatTokens)(info.usedTokens)} / ${(0, helpers_1.formatTokens)(info.maxTokens)} tokens  \n` +
+                `使用率　　　 ${info.percentage.toFixed(2)}%  \n` +
+                `输入 / 缓存　${(0, helpers_1.formatTokens)(info.inputTokens)} / ${(0, helpers_1.formatTokens)(info.cacheReadTokens)}  \n` +
+                `会话　　　　 ${info.sessionId.substring(0, 8)}...  \n` +
+                `更新　　　　 ${info.lastUpdated.toLocaleTimeString()}\n\n`);
         }
         else if (state.claude.error) {
-            parts.push(`### Claude Code\n\nError: ${state.claude.error}\n\n`);
+            parts.push(`### Claude Code\n\n错误：${state.claude.error}\n\n`);
         }
         parts.push('---\n\n');
         // MiniMax section
         const mm = state.minimax;
         parts.push(`### MiniMax\n\n` +
-            `**5h:** ${mm.h5Usage}/${mm.h5Total} · ${this.fmtDuration(mm.h5Remain)} to reset  \n` +
-            `**Week:** ${mm.weekUsage}/${mm.weekTotal}\n\n`);
+            `5小时　　 ${mm.h5Usage} / ${mm.h5Total}（${this.fmtDuration(mm.h5Remain)} 后重置）  \n` +
+            `周额度　　 ${mm.weekUsage} / ${mm.weekTotal}\n\n`);
         parts.push('---\n\n');
         // GLM section
         const glm = state.glm;
         const mcpNameMap = {
-            "search-prime": "Search",
-            "web-reader": "Web Reader",
-            "zread": "Docs",
+            "search-prime": "搜索",
+            "web-reader": "网页读取",
+            "zread": "文档",
         };
         parts.push(`### GLM${glm.level ? ` (${glm.level})` : ""}\n\n` +
-            `**5h:** ${glm.tokens5h}% · ${this.fmtResetTime(glm.tokens5hReset)} to reset  \n` +
-            `**Week:** ${glm.tokensWeek}% · ${this.fmtResetTime(glm.tokensWeekReset)} to reset  \n` +
-            `**Monthly:** ${glm.time5h}% · ${this.fmtResetTime(glm.nextReset5h)} to reset  \n` +
-            `**MCP:** ${glm.time5hUsed}/${glm.time5hTotal}  \n` +
+            `5小时　　 ${glm.tokens5h}%（${this.fmtResetTime(glm.tokens5hReset)} 后重置）  \n` +
+            `周额度　　 ${glm.tokensWeek}%（${this.fmtResetTime(glm.tokensWeekReset)} 后重置）  \n` +
+            `月额度　　 ${glm.time5h}%（${this.fmtResetTime(glm.nextReset5h)} 后重置）  \n` +
+            `MCP 工具　 ${glm.time5hUsed} / ${glm.time5hTotal}  \n` +
             (glm.mcpUsage.length > 0
-                ? glm.mcpUsage.map(d => `　**${mcpNameMap[d.modelCode] ?? d.modelCode}:** ${d.usage}`).join("  \n") + "  \n"
+                ? glm.mcpUsage.map(d => `　${mcpNameMap[d.modelCode] ?? d.modelCode}　　 ${d.usage}`).join("  \n") + "  \n"
                 : ""));
-        parts.push(`\n---\n\n_Updated at ${new Date().toLocaleTimeString()}_`);
+        parts.push(`\n---\n\n_更新于 ${new Date().toLocaleTimeString()}_`);
         return new vscode.MarkdownString(parts.join(''), true);
     }
     fmtDuration(ms) {

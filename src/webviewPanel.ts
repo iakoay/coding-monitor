@@ -551,89 +551,89 @@ export class WebviewPanel {
         return `
         <form onsubmit="return false;">
         <div class="settings-card">
-            <h3>API Keys</h3>
+            <h3>API 密钥</h3>
             <div class="form-group">
-                <label for="cfg-minimaxKey">MiniMax API Key</label>
-                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="Enter MiniMax API Key">
-                <div class="hint">Used to fetch MiniMax coding plan quota</div>
+                <label for="cfg-minimaxKey">MiniMax API 密钥</label>
+                <input type="password" id="cfg-minimaxKey" value="${this.escapeAttr(v.codingPlan_minimaxKey)}" placeholder="输入 MiniMax API Key">
+                <div class="hint">用于获取 MiniMax 编程配额</div>
             </div>
             <div class="form-group">
-                <label for="cfg-glmKey">Zhipu GLM API Key</label>
-                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="Enter GLM API Key">
-                <div class="hint">Used to fetch GLM coding plan quota</div>
+                <label for="cfg-glmKey">智谱 GLM API 密钥</label>
+                <input type="password" id="cfg-glmKey" value="${this.escapeAttr(v.codingPlan_glmKey)}" placeholder="输入 GLM API Key">
+                <div class="hint">用于获取 GLM 编程配额</div>
             </div>
         </div>
 
         <div class="settings-card">
-            <h3>Status Bar</h3>
+            <h3>状态栏</h3>
             <div class="form-group">
-                <label for="cfg-statusBarAlignment">Alignment</label>
+                <label for="cfg-statusBarAlignment">对齐位置</label>
                 <select id="cfg-statusBarAlignment" style="width:100%;padding:6px 8px;background:var(--vscode-input-background,#3c3c3c);color:var(--vscode-input-foreground,#cccccc);border:1px solid var(--vscode-input-border,#3c3c3c);border-radius:4px;">
-                    <option value="left" ${v.codingMonitor_statusBarAlignment === 'left' ? 'selected' : ''}>Left</option>
-                    <option value="right" ${v.codingMonitor_statusBarAlignment === 'right' ? 'selected' : ''}>Right</option>
+                    <option value="left" ${v.codingMonitor_statusBarAlignment === 'left' ? 'selected' : ''}>左侧</option>
+                    <option value="right" ${v.codingMonitor_statusBarAlignment === 'right' ? 'selected' : ''}>右侧</option>
                 </select>
-                <div class="hint">Status bar position: Left or Right side</div>
+                <div class="hint">状态栏显示位置</div>
             </div>
             <div class="form-group">
-                <label for="cfg-statusBarPriority">Priority</label>
+                <label for="cfg-statusBarPriority">优先级</label>
                 <input type="number" id="cfg-statusBarPriority" value="${v.codingMonitor_statusBarPriority}" min="0" step="10">
-                <div class="hint">Higher value = more to the left within the alignment side</div>
+                <div class="hint">值越大越靠左</div>
             </div>
         </div>
 
         <div class="settings-card">
-            <h3>Claude Context Monitor</h3>
+            <h3>Claude 上下文监控</h3>
             <div class="form-group">
-                <label for="cfg-refreshInterval">Refresh Interval (ms)</label>
+                <label for="cfg-refreshInterval">刷新间隔（毫秒）</label>
                 <input type="number" id="cfg-refreshInterval" value="${v.claudeContext_refreshInterval}" min="1000" step="500">
-                <div class="hint">Auto-refresh interval for context usage, default 5000ms</div>
+                <div class="hint">自动刷新间隔，默认 5000ms</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-showPercentage" ${v.claudeContext_showPercentage ? 'checked' : ''}>
-                    <label for="cfg-showPercentage">Show Percentage</label>
+                    <label for="cfg-showPercentage">显示百分比</label>
                 </div>
-                <div class="hint">Show percentage in status bar (off = show token count)</div>
+                <div class="hint">在状态栏显示百分比（关闭则显示 token 数量）</div>
             </div>
             <div class="form-group">
-                <label for="cfg-warningThreshold">Warning Threshold (%)</label>
+                <label for="cfg-warningThreshold">警告阈值（%）</label>
                 <input type="number" id="cfg-warningThreshold" value="${v.claudeContext_warningThreshold}" min="1" max="100">
-                <div class="hint">Status bar turns yellow when context exceeds this value, default 70%</div>
+                <div class="hint">上下文超过此值时状态栏变黄，默认 70%</div>
             </div>
             <div class="form-group">
-                <label for="cfg-criticalThreshold">Critical Threshold (%)</label>
+                <label for="cfg-criticalThreshold">严重阈值（%）</label>
                 <input type="number" id="cfg-criticalThreshold" value="${v.claudeContext_criticalThreshold}" min="1" max="100">
-                <div class="hint">Status bar turns red when context exceeds this value, default 90%</div>
+                <div class="hint">上下文超过此值时状态栏变红，默认 90%</div>
             </div>
             <div class="form-group">
                 <div class="checkbox-row">
                     <input type="checkbox" id="cfg-enableNotifications" ${v.claudeContext_enableNotifications ? 'checked' : ''}>
-                    <label for="cfg-enableNotifications">Enable Notifications</label>
+                    <label for="cfg-enableNotifications">启用通知</label>
                 </div>
-                <div class="hint">Show notification when thresholds are exceeded</div>
+                <div class="hint">超过阈值时弹出通知</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeCheckInterval">Freeze Check Interval (ms)</label>
+                <label for="cfg-freezeCheckInterval">冻结检测间隔（毫秒）</label>
                 <input type="number" id="cfg-freezeCheckInterval" value="${v.claudeContext_freezeCheckInterval}" min="1000" step="1000">
-                <div class="hint">Interval for checking if Claude Code is frozen, default 10000ms</div>
+                <div class="hint">检测 Claude Code 是否冻结的间隔，默认 10000ms</div>
             </div>
             <div class="form-group">
-                <label for="cfg-freezeThreshold">Freeze Threshold (ms)</label>
+                <label for="cfg-freezeThreshold">冻结判定时间（毫秒）</label>
                 <input type="number" id="cfg-freezeThreshold" value="${v.claudeContext_freezeThreshold}" min="5000" step="5000">
-                <div class="hint">Tool call exceeding this time with no response is considered frozen, default 30000ms</div>
+                <div class="hint">工具调用超过此时间无响应视为冻结，默认 30000ms</div>
             </div>
         </div>
 
         <div class="settings-card">
-            <h3>Coding Plan</h3>
+            <h3>编程配额</h3>
             <div class="form-group">
-                <label for="cfg-apiRefreshInterval">API Refresh Interval (seconds)</label>
+                <label for="cfg-apiRefreshInterval">API 刷新间隔（秒）</label>
                 <input type="number" id="cfg-apiRefreshInterval" value="${v.codingPlan_refreshInterval}" min="30" step="30">
-                <div class="hint">MiniMax / GLM quota data refresh interval, default 300 seconds</div>
+                <div class="hint">MiniMax / GLM 配额数据刷新间隔，默认 300 秒</div>
             </div>
         </div>
 
-        <button type="button" class="save-btn" onclick="saveSettings()">Save</button>
+        <button type="button" class="save-btn" onclick="saveSettings()">保存</button>
         <span id="save-result" class="save-result"></span>
         </form>`;
     }
@@ -644,7 +644,7 @@ export class WebviewPanel {
 
     private getClaudeTabHtml(info: ContextInfo | null, warningThreshold: number, criticalThreshold: number): string {
         if (!info) {
-            return `<div class="info-card"><p>No Claude Code session found. Start a Claude Code session to see context usage.</p></div>`;
+            return `<div class="info-card"><p>未检测到 Claude Code 会话。请先启动 Claude Code 会话。</p></div>`;
         }
 
         const percentage = info.percentage.toFixed(2);
@@ -658,35 +658,35 @@ export class WebviewPanel {
         return `
         <div class="info-card">
             <div class="info-row">
-                <span class="label">Model</span>
+                <span class="label">模型</span>
                 <span class="value"><span class="model-badge">${info.model}</span></span>
             </div>
             <div class="info-row">
-                <span class="label">Input Tokens (new)</span>
+                <span class="label">输入 Tokens（新增）</span>
                 <span class="value">${info.inputTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Cache Read Tokens</span>
+                <span class="label">缓存读取 Tokens</span>
                 <span class="value">${info.cacheReadTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Cache Creation Tokens</span>
+                <span class="label">缓存创建 Tokens</span>
                 <span class="value">${info.cacheCreationTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Output Tokens</span>
+                <span class="label">输出 Tokens</span>
                 <span class="value">${info.outputTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Total Context Used</span>
+                <span class="label">总上下文用量</span>
                 <span class="value">${info.usedTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Max Context Window</span>
+                <span class="label">上下文窗口上限</span>
                 <span class="value">${info.maxTokens.toLocaleString()}</span>
             </div>
             <div class="info-row">
-                <span class="label">Remaining</span>
+                <span class="label">剩余</span>
                 <span class="value">${(info.maxTokens - info.usedTokens).toLocaleString()}</span>
             </div>
         </div>
@@ -702,9 +702,9 @@ export class WebviewPanel {
         </div>
 
         <div class="info-card">
-            <h3>Estimated Usage by Category</h3>
+            <h3>分类用量估算</h3>
             <table>
-                <thead><tr><th>Category</th><th>Tokens</th><th>%</th></tr></thead>
+                <thead><tr><th>分类</th><th>Tokens</th><th>%</th></tr></thead>
                 <tbody>${categoryRows}</tbody>
             </table>
         </div>
@@ -712,16 +712,16 @@ export class WebviewPanel {
         <div class="threshold-info">
             <div class="threshold-item">
                 <div class="threshold-value normal">${warningThreshold}%</div>
-                <div class="threshold-label">Warning Threshold</div>
+                <div class="threshold-label">警告阈值</div>
             </div>
             <div class="threshold-item">
                 <div class="threshold-value warning">${criticalThreshold}%</div>
-                <div class="threshold-label">Critical Threshold</div>
+                <div class="threshold-label">严重阈值</div>
             </div>
         </div>
 
         <div class="refresh-info">
-            Session: ${info.sessionId.substring(0, 8)}... | Updated: ${info.lastUpdated.toLocaleString()}
+            会话：${info.sessionId.substring(0, 8)}... | 更新于：${info.lastUpdated.toLocaleString()}
         </div>`;
     }
 
@@ -732,9 +732,9 @@ export class WebviewPanel {
                            glm.tokens5h >= 80 ? '#dcdcaa' : '#4ec9b0';
 
         const mcpNameMap: Record<string, string> = {
-            "search-prime": "Search",
-            "web-reader": "Web Reader",
-            "zread": "Docs",
+            "search-prime": "搜索",
+            "web-reader": "网页读取",
+            "zread": "文档",
         };
 
         const mcpRows = glm.mcpUsage.map(d =>
@@ -745,15 +745,15 @@ export class WebviewPanel {
         <div class="api-card">
             <h3>MiniMax</h3>
             <div class="info-row">
-                <span class="label">5h Usage</span>
+                <span class="label">5小时用量</span>
                 <span class="value">${minimax.h5Usage} / ${minimax.h5Total}</span>
             </div>
             <div class="info-row">
-                <span class="label">5h Remaining</span>
-                <span class="value">${minimax.h5RemainCount} (${formatDuration(minimax.h5Remain)} reset)</span>
+                <span class="label">5小时剩余</span>
+                <span class="value">${minimax.h5RemainCount}（${formatDuration(minimax.h5Remain)} 后重置）</span>
             </div>
             <div class="info-row">
-                <span class="label">Weekly Usage</span>
+                <span class="label">周用量</span>
                 <span class="value">${minimax.weekUsage} / ${minimax.weekTotal}</span>
             </div>
             <div class="percentage-text" style="font-size: 32px; color: ${mmBarColor}">${minimax.h5Percent}%</div>
@@ -769,28 +769,28 @@ export class WebviewPanel {
         <div class="api-card">
             <h3>GLM${glm.level ? ` (${glm.level})` : ''}</h3>
             <div class="info-row">
-                <span class="label">5h Token Usage</span>
+                <span class="label">5小时用量</span>
                 <span class="value">${glm.tokens5h}%</span>
             </div>
             <div class="info-row">
-                <span class="label">Weekly Token Usage</span>
-                <span class="value">${glm.tokensWeek}% (${formatResetTime(glm.tokensWeekReset)} reset)</span>
+                <span class="label">周额度</span>
+                <span class="value">${glm.tokensWeek}%（${formatResetTime(glm.tokensWeekReset)} 后重置）</span>
             </div>
             <div class="info-row">
-                <span class="label">Monthly Model Usage</span>
+                <span class="label">月额度</span>
                 <span class="value">${glm.time5h}%</span>
             </div>
             <div class="info-row">
-                <span class="label">Monthly Reset</span>
+                <span class="label">月额度重置</span>
                 <span class="value">${formatResetTime(glm.nextReset5h)}</span>
             </div>
             <div class="info-row">
-                <span class="label">MCP Tools</span>
+                <span class="label">MCP 工具</span>
                 <span class="value">${glm.time5hUsed} / ${glm.time5hTotal}</span>
             </div>
             ${glm.mcpUsage.length > 0 ? `
             <table>
-                <thead><tr><th>Service</th><th>Usage</th></tr></thead>
+                <thead><tr><th>服务</th><th>用量</th></tr></thead>
                 <tbody>${mcpRows}</tbody>
             </table>` : ''}
             <div class="percentage-text" style="font-size: 32px; color: ${glmBarColor}">${glm.tokens5h}%</div>
@@ -809,27 +809,27 @@ export class WebviewPanel {
                            state.health === 'frozen' ? 'health-err' :
                            state.health === 'api_error' ? 'health-err' : 'health-warn';
 
-        const healthLabel = state.health === 'healthy' ? 'Healthy' :
-                           state.health === 'tool_pending' ? 'Tool Pending' :
-                           state.health === 'frozen' ? 'FROZEN' :
-                           state.health === 'api_error' ? 'API Error' : 'No Session';
+        const healthLabel = state.health === 'healthy' ? '健康' :
+                           state.health === 'tool_pending' ? '工具执行中' :
+                           state.health === 'frozen' ? '冻结' :
+                           state.health === 'api_error' ? 'API 错误' : '无会话';
 
         return `
         <div class="health-status ${healthClass}">
-            Status: ${healthLabel}
+            状态：${healthLabel}
         </div>
         <div class="info-card">
             <div class="info-row">
-                <span class="label">State</span>
+                <span class="label">状态</span>
                 <span class="value">${state.health}</span>
             </div>
             <div class="info-row">
-                <span class="label">Reason</span>
-                <span class="value">${state.healthReason || 'N/A'}</span>
+                <span class="label">原因</span>
+                <span class="value">${state.healthReason || '无'}</span>
             </div>
         </div>
         <div class="refresh-info">
-            Use "Claude Context: Show Freeze Log" command for detailed diagnostics.
+            使用 "Claude Context: Show Freeze Log" 命令查看详细诊断信息。
         </div>`;
     }
 
